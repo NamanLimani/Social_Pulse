@@ -40,11 +40,11 @@ try:
             entity_sentiment[key].append(sentiment)
 
         # Every 60 seconds, print and save leaderboard
-        if time.time() - start_time > 60:
-            print("\n--- Top 10 Entities (last minute) ---")
+        if time.time() - start_time > 5:
+            print("\n--- Top 10 Entities (last 5 second) ---")
             leaderboard = []
             for key, count in entity_counter.most_common(10):
-                pos = entity_sentiment[key].count('positive')
+                pos = entity_sentiment[key].count("positive")
                 tot = len(entity_sentiment[key])
                 print(f"{key}: {count} mentions ({pos}/{tot} positive)")
                 leaderboard.append({
@@ -53,11 +53,21 @@ try:
                     "positive": pos,
                     "total": tot
                 })
-            # Save leaderboard snapshot to MongoDB
-            trend_coll.insert_one({
-                "timestamp": time.time(),
-                "leaderboard": leaderboard
-            })
+
+            # Compute a minute bucket timestamp (e.g., 2025-11-26 11:57 -> same bucket)
+            bucket_ts = int(time.time() // 5) * 5
+
+            # Upsert per minute bucket to avoid duplicate snapshots for same minute
+            trend_coll.update_one(
+                {"bucket_ts": bucket_ts},
+                {
+                    "$set": {
+                        "bucket_ts": bucket_ts,
+                        "leaderboard": leaderboard
+                    }
+                },
+                upsert=True
+            )
 
             # Reset counters
             entity_counter.clear()
@@ -65,3 +75,4 @@ try:
             start_time = time.time()
 except KeyboardInterrupt:
     print("\nAggregator stopped.")
+

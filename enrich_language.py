@@ -45,6 +45,14 @@ for msg in consumer:
         text = event["commit"]["record"].get("text", "")
         created_at = event["commit"]["record"].get("createdAt", "unknown time")
 
+        # Reuse post_id from upstream if present
+        post_id = event.get("post_id")
+        if post_id is None:
+            # Fallback: build something deterministic if needed
+            did = event.get("did", "unknown")
+            time_us = event.get("time_us", "unknown")
+            post_id = f"{did}:{time_us}"
+
         # Detect language
         try:
             lang = detect(text)
@@ -52,16 +60,21 @@ for msg in consumer:
             lang = "und"  # undetermined
 
         enriched_event = {
+            "post_id": post_id,
             "author": author,
             "created_at": created_at,
             "text": text,
             "lang": lang,
         }
 
-        # Insert a deepcopy to MongoDB to avoid mutating the Kafka version
-        lang_coll.insert_one(copy.deepcopy(enriched_event))
+        # Upsert into MongoDB using post_id as unique key
+        lang_coll.update_one(
+            {"post_id": enriched_event["post_id"]},
+            {"$set": copy.deepcopy(enriched_event)},
+            upsert=True,
+        )
 
         print(f"Lang {lang} | Post: {text[:60]}")
-        # Always send the original dict (never a version with _id) to Kafka
+        # Send enriched event (with post_id) to Kafka
         producer.send(PRODUCE_TOPIC, value=enriched_event)
         producer.flush()

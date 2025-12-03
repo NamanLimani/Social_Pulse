@@ -35,13 +35,22 @@ topics_coll = db["topics"]
 
 print("Running real-time topic modeling...")
 
-# **Batch posts for windowed topic modeling**
+# Batch posts for windowed topic modeling
 batch_texts = []
 batch_events = []
 WINDOW = 150  # Number of posts per topic batch
 
 for msg in consumer:
     event = msg.value
+
+    # Ensure post_id is present (should come from previous stages)
+    post_id = event.get("post_id")
+    if post_id is None:
+        author = event.get("author", "unknown")
+        created_at = event.get("created_at", "unknown")
+        post_id = f"{author}:{created_at}"
+        event["post_id"] = post_id
+
     if event.get("lang") == "en":
         text = event.get("text", "")
         if text.strip():
@@ -50,12 +59,12 @@ for msg in consumer:
 
     if len(batch_texts) >= WINDOW:
         # Preprocess and vectorize
-        stop_words = stopwords.words('english')
+        stop_words = stopwords.words("english")
         count_vect = CountVectorizer(stop_words=stop_words, lowercase=True)
         X_counts = count_vect.fit_transform(batch_texts)
         tfidf_transformer = TfidfTransformer()
         X_tfidf = tfidf_transformer.fit_transform(X_counts)
-        
+
         # Topic model (NMF is simple & interpretable)
         n_topics = 6  # You can adjust this for more/less topics
         nmf = NMF(n_components=n_topics, random_state=42)
@@ -72,15 +81,23 @@ for msg in consumer:
 
         # Publish topic assignments and update batch
         for i, event in enumerate(batch_events):
-            event["topic"] = int(topic_labels[i])
-            event["topic_keywords"] = topic_keywords[int(topic_labels[i])]
-            
-            # Insert deepcopy to MongoDB so _id does not mutate original
-            topics_coll.insert_one(copy.deepcopy(event))
-            
+            topic_id = int(topic_labels[i])
+            event["topic"] = topic_id
+            event["topic_keywords"] = topic_keywords[topic_id]
+
+            # Upsert into MongoDB using post_id as unique key
+            topics_coll.update_one(
+                {"post_id": event["post_id"]},
+                {"$set": copy.deepcopy(event)},
+                upsert=True,
+            )
+
             # Send only the original (no _id) to Kafka
             producer.send(PRODUCE_TOPIC, value=event)
-            print(f"Topic {topic_labels[i]} | {event['text'][:60]} | Keywords: {', '.join(topic_keywords[topic_labels[i]])}")
+            print(
+                f"Topic {topic_id} | {event['text'][:60]} | "
+                f"Keywords: {', '.join(topic_keywords[topic_id])}"
+            )
 
         batch_texts.clear()
         batch_events.clear()

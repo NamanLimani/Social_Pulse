@@ -34,6 +34,14 @@ for msg in consumer:
     text = event.get("text", "")
     lang = event.get("lang", "und")
 
+    # Ensure post_id is present (should come from previous stage)
+    post_id = event.get("post_id")
+    if post_id is None:
+        author = event.get("author", "unknown")
+        created_at = event.get("created_at", "unknown")
+        post_id = f"{author}:{created_at}"
+        event["post_id"] = post_id
+
     # Apply sentiment only to English (for this demo)
     if lang == "en" and text.strip():
         blob = TextBlob(text)
@@ -49,8 +57,12 @@ for msg in consumer:
 
     event["sentiment"] = sentiment
 
-    # Insert a deep copy into MongoDB to avoid mutating original
-    sent_coll.insert_one(copy.deepcopy(event))
+    # Upsert into MongoDB using post_id as unique key
+    sent_coll.update_one(
+        {"post_id": event["post_id"]},
+        {"$set": copy.deepcopy(event)},
+        upsert=True,
+    )
 
     print(f"Sentiment {sentiment} | Lang {lang} | {text[:60]}")
     producer.send(PRODUCE_TOPIC, value=event)

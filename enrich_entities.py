@@ -36,6 +36,14 @@ for msg in consumer:
     event = msg.value
     text = event.get("text", "")
 
+    # Ensure post_id is present (should come from previous stages)
+    post_id = event.get("post_id")
+    if post_id is None:
+        author = event.get("author", "unknown")
+        created_at = event.get("created_at", "unknown")
+        post_id = f"{author}:{created_at}"
+        event["post_id"] = post_id
+
     # Only process English for demo (spaCy model is English here)
     if event.get("lang") == "en" and text.strip():
         doc = nlp(text)
@@ -45,8 +53,12 @@ for msg in consumer:
 
     event["entities"] = entities
 
-    # Insert deepcopy to MongoDB so _id does not affect original dict
-    ent_coll.insert_one(copy.deepcopy(event))
+    # Upsert into MongoDB using post_id as unique key
+    ent_coll.update_one(
+        {"post_id": event["post_id"]},
+        {"$set": copy.deepcopy(event)},
+        upsert=True,
+    )
 
     print(f"Entities found: {entities} | {text[:60]}")
     producer.send(PRODUCE_TOPIC, value=event)

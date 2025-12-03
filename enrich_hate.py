@@ -34,25 +34,41 @@ hate_coll = db["toxicity"]
 
 print("Running hate speech detection (HF pipeline)...")
 classifier = pipeline("text-classification", model="unitary/toxic-bert", device=-1)
-# For a lighter/faster test: model="distilbert-base-uncased-finetuned-sst-2-english" (labels: POSITIVE/NEGATIVE)
+# For a lighter/faster test: model="distilbert-base-uncased-finetuned-sst-2-english"
 
 for msg in consumer:
     event = msg.value
     text = event.get("text", "")
+
+    # Ensure post_id is present (should come from previous stages)
+    post_id = event.get("post_id")
+    if post_id is None:
+        author = event.get("author", "unknown")
+        created_at = event.get("created_at", "unknown")
+        post_id = f"{author}:{created_at}"
+        event["post_id"] = post_id
+
     is_toxic = False
     toxicity_score = 0.0
 
     if text.strip():
         res = classifier(text)
         # Some models return label as "toxic"/"non-toxic" or "LABEL_1"/"LABEL_0"
-        label = res[0]['label'].lower()
+        label = res[0]["label"].lower()
         is_toxic = "toxic" in label or "negative" in label
-        toxicity_score = res[0]['score']
+        toxicity_score = float(res[0]["score"])
 
     event["toxic"] = is_toxic
     event["toxicity_score"] = toxicity_score
 
     print(f"Toxic={is_toxic} | Score={toxicity_score:.2f} | {text[:60]}")
-    hate_coll.insert_one(copy.deepcopy(event))
+
+    # Upsert into MongoDB using post_id as unique key
+    hate_coll.update_one(
+        {"post_id": event["post_id"]},
+        {"$set": copy.deepcopy(event)},
+        upsert=True,
+    )
+
     producer.send(PRODUCE_TOPIC, value=event)
     producer.flush()

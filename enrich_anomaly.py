@@ -37,6 +37,15 @@ print("Running real-time anomaly detection (topic spike)...")
 
 for msg in consumer:
     event = msg.value
+
+    # Ensure post_id is present (should come from previous stages)
+    post_id = event.get("post_id")
+    if post_id is None:
+        author = event.get("author", "unknown")
+        created_at = event.get("created_at", "unknown")
+        post_id = f"{author}:{created_at}"
+        event["post_id"] = post_id
+
     if event.get("topic") is not None:
         topics.append(event["topic"])
         texts.append(event.get("text", ""))
@@ -57,10 +66,18 @@ for msg in consumer:
             is_anomaly = event["topic"] in anomalies
             event["topic_anomaly"] = bool(is_anomaly)
             if is_anomaly:
-                print(f"⚠️ Anomalous topic spike detected: Topic {event['topic']} | {event['text'][:60]}")
+                print(
+                    f"⚠️ Anomalous topic spike detected: "
+                    f"Topic {event['topic']} | {event['text'][:60]}"
+                )
 
-            # Insert a deepcopy to MongoDB (to avoid mutating original)
-            anomaly_coll.insert_one(copy.deepcopy(event))
+            # Upsert into MongoDB using post_id as unique key
+            anomaly_coll.update_one(
+                {"post_id": event["post_id"]},
+                {"$set": copy.deepcopy(event)},
+                upsert=True,
+            )
+
             # Send only the original (no _id) to Kafka
             producer.send(PRODUCE_TOPIC, value=event)
 

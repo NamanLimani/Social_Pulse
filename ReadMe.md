@@ -1,173 +1,113 @@
+# Bluesky → Kafka → MongoDB NLP Pipeline
 
-## Ingestion: `bluesky_jetstream_to_kafka.py`
+This project builds a real‑time data pipeline that ingests posts from the Bluesky Jetstream “firehose”, processes them through multiple NLP stages, and stores both raw and enriched data in MongoDB. Kafka connects the stages and allows the system to scale and replay data.
 
-- Opens a WebSocket connection to Bluesky’s Jetstream endpoint and receives a continuous stream of JSON events (posts, identity updates, etc.).[1][2]
-- For each incoming message:
-  - Parses the JSON into a Python dict.
-  - Inserts a copy into MongoDB `bigdata.raw_posts` for raw, immutable archival.
-  - Sends the original dict to Kafka topic `social_posts` via a KafkaProducer (JSON-serialized to bytes), so downstream services can consume it.[3][1]
-- This script is the “source” of your data pipeline.
+## Overview
 
-***
+High-level flow:
 
-## Language enrichment: `enrich_language.py`
+1. **Bluesky Jetstream listener**  
+   - Connects to Bluesky Jetstream via WebSocket.  
+   - Assigns a stable `post_id` to each post.  
+   - Upserts raw events into MongoDB (`bigdata.raw_posts`).  
+   - Publishes events into Kafka topic `social_posts`.
 
-- KafkaConsumer reads events from `social_posts`.[1][3]
-- Filters only normal post “commit” events (Bluesky-specific structure: `kind="commit"`, `operation="create"`, collection `app.bsky.feed.post`).
-- Extracts:
-  - `author` (DID),
-  - `created_at`,
-  - `text` string.
-- Uses `langdetect` to detect the language code of the post text.
-- Builds `enriched_event = {author, created_at, text, lang}`.
-- Writes a copy into MongoDB `bigdata.language`.
-- Sends `enriched_event` to Kafka topic `social_posts_enriched` for later stages.
+2. **Language enrichment**  
+   - Consumes from `social_posts`.  
+   - Detects language of each post with `langdetect`.  
+   - Upserts into `bigdata.language`.  
+   - Emits to `social_posts_enriched`.
 
-***
+3. **Sentiment enrichment**  
+   - Consumes from `social_posts_enriched`.  
+   - Uses TextBlob to compute sentiment (positive/negative/neutral for English posts).  
+   - Upserts into `bigdata.sentiment`.  
+   - Emits to `social_posts_sentiment`.
 
-## Sentiment enrichment: `enrich_sentiment.py`
+4. **Entity extraction (NER)**  
+   - Consumes from `social_posts_sentiment`.  
+   - Uses spaCy (`en_core_web_sm`) to extract named entities.  
+   - Upserts into `bigdata.entities`.  
+   - Emits to `social_posts_ner`.
 
-- KafkaConsumer reads from `social_posts_enriched`.
-- For each event:s
-  - Gets `text` and `lang`.
-  - If `lang == "en"` and text is not empty:
-    - Uses TextBlob to compute sentiment polarity (a score from negative to positive).[4][5]
-    - Maps polarity into `"positive"`, `"negative"`, or `"neutral"`.
-  - Otherwise marks sentiment as `"unknown"`.
-- Adds `event["sentiment"] = sentiment`.
-- Stores a copy in MongoDB `bigdata.sentiment`.
-- Sends the enriched event to Kafka topic `social_posts_sentiment`.
+5. **Trend aggregation**  
+   - Consumes from `social_posts_ner`.  
+   - Counts entity mentions and associated sentiments in short time windows.  
+   - Every N seconds, writes a leaderboard snapshot into `bigdata.trend_aggregates`.
 
-***
+6. **Topic modeling**  
+   - Consumes batches of posts from `social_posts_ner`.  
+   - Uses scikit‑learn (`CountVectorizer`, `TfidfTransformer`, `NMF`) to infer topics.  
+   - Tags each post with a `topic` id and `topic_keywords`.  
+   - Upserts into `bigdata.topics`.  
+   - Emits to `social_posts_topics`.
 
-## Entity extraction (NER): `enrich_entities.py`
+7. **Anomaly detection (topic spikes)**  
+   - Consumes from `social_posts_topics`.  
+   - Builds topic-frequency windows and runs `IsolationForest` to flag anomalous spikes.  
+   - Marks events with `topic_anomaly`.  
+   - Upserts into `bigdata.anomalies`.  
+   - Emits to `social_posts_anomaly`.
 
-- KafkaConsumer reads from `social_posts_sentiment`.
-- Loads spaCy English model `en_core_web_sm` plus its NER component.[5]
-- For each event:
-  - If `lang == "en"` and text is non-empty:
-    - Runs spaCy to detect named entities: people, organizations, locations, dates, etc.
-    - Builds `entities = [{"text": ent.text, "label": ent.label_}, ...]`.
-  - Otherwise uses empty list.
-- Attaches `event["entities"] = entities`.
-- Writes a copy into MongoDB `bigdata.entities`.
-- Sends the enriched event to Kafka topic `social_posts_ner`.
+8. **Rumor detection (zero‑shot)**  
+   - Consumes from `social_posts_anomaly`.  
+   - Uses a Hugging Face zero‑shot model (`facebook/bart-large-mnli`) to classify posts as `rumor` / `not rumor`.  
+   - Adds `is_rumor` and `rumor_score`.  
+   - Upserts into `bigdata.rumor`.  
+   - Emits to `social_posts_rumor`.
 
-***
+9. **Summarization (keyphrase‑based)**  
+   - Consumes from `social_posts_rumor`.  
+   - Uses spaCy + PyTextRank to generate a short extractive summary or key phrase.  
+   - Adds `summary`.  
+   - Upserts into `bigdata.summaries`.  
+   - Emits to `social_posts_summary`.
 
-## Topic modeling: `enrich_topics.py`
+10. **Hate / toxicity detection**  
+    - Consumes from `social_posts_summary`.  
+    - Uses a Hugging Face text‑classification model (`unitary/toxic-bert`) to score toxicity.  
+    - Adds `toxic` and `toxicity_score`.  
+    - Upserts into `bigdata.toxicity`.  
+    - Emits to `social_posts_final`.
 
-- KafkaConsumer reads from `social_posts_ner`.
-- Batches English posts (e.g., 150 at a time) into `batch_texts` and `batch_events`.
-- When the batch is full:
-  - Uses NLTK stopwords, CountVectorizer, and TF-IDF to build a document-term matrix.[6][5]
-  - Trains NMF (Non-negative Matrix Factorization) with `n_topics` components using scikit-learn.[5]
-  - For each document, finds the most likely topic index and extracts the top keywords for each topic.
-- For each event in the batch:
-  - Adds `event["topic"] = int(topic_id)` and `event["topic_keywords"] = [list of top words]`.
-  - Copies into MongoDB `bigdata.topics`.
-  - Sends the enriched event to Kafka topic `social_posts_topics`.
+A small launcher script (`run_all.py` or similar) starts all the individual enrichment scripts in separate subprocesses so the whole pipeline runs with one command.
 
-***
+## Key Concepts
 
-## Anomaly detection: `enrich_anomaly.py`
+- **Kafka topics**  
+  Each stage reads from one topic and writes to the next:
+  - `social_posts` → `social_posts_enriched` → `social_posts_sentiment` → `social_posts_ner` →  
+    `social_posts_topics` → `social_posts_anomaly` → `social_posts_rumor` → `social_posts_summary` → `social_posts_final`.
 
-- KafkaConsumer reads from `social_posts_topics`.
-- Maintains a sliding window (e.g., 200 events) of topics and events.
-- After collecting a full window:
-  - Builds a pandas DataFrame of topic counts for that window.
-  - Uses IsolationForest (from scikit-learn) on the topic frequencies to detect outlier topics (sudden spikes).[5]
-- Flags events whose `topic` is in the anomaly set:
-  - Adds `event["topic_anomaly"] = True/False`.
-  - Logs alerts for anomalous topic spikes.
-- Copies each event into MongoDB `bigdata.anomalies`.
-- Sends events to Kafka topic `social_posts_anomaly`.
+- **Stable `post_id`**  
+  All collections in MongoDB use `post_id` as a unique key:
+  - Writes use `update_one({"post_id": ...}, {"$set": ...}, upsert=True)`  
+  - This makes the pipeline idempotent: reprocessing or replay from Kafka updates the same documents instead of creating duplicates.
 
-***
+- **MongoDB schema** (database `bigdata`)
+  - `raw_posts`: full raw Jetstream events.  
+  - `language`: `post_id`, `author`, `text`, `lang`.  
+  - `sentiment`: language + sentiment label.  
+  - `entities`: entities list per post.  
+  - `trend_aggregates`: periodic top-entities leaderboard.  
+  - `topics`: topic id and keywords for each post.  
+  - `anomalies`: anomaly flag for topic spikes.  
+  - `rumor`: rumor classification and score.  
+  - `summaries`: short summary text per post.  
+  - `toxicity`: toxicity classification and score.
 
-## Rumor detection: `enrich_rumor.py`
+- **Cursor-based resume for Jetstream**  
+  The Bluesky listener stores the last seen `time_us` in a small Mongo collection (e.g., `jetstream_cursors`). On restart, it reconnects with a `cursor` parameter slightly before the last value and continues streaming, while `post_id` upserts prevent duplicates.
 
-- KafkaConsumer reads from `social_posts_anomaly`.
-- Uses HuggingFace’s zero-shot-classification pipeline with `facebook/bart-large-mnli` (or a distilled variant) to classify each text as `"rumor"` vs `"not rumor"` without custom training.[7][8][6]
-  - The model was fine-tuned on MNLI and repurposed for zero-shot classification based on whether the premise (post text) entails a “rumor” label.[9][8]
-- For each text:
-  - Calls classifier with labels `["rumor", "not rumor"]`.
-  - Sets `event["is_rumor"]` based on top label.
-  - Stores `event["rumor_score"]` as the confidence score.
-- Writes a copy into MongoDB `bigdata.rumor`.
-- Sends to Kafka topic `social_posts_rumor`.
+## Running the Pipeline
 
-***
+1. Start infrastructure (Kafka, Zookeeper, Mongo, Metabase) via Docker Compose.
+2. Activate the Python virtual environment and install all requirements.
+3. Run the launcher script, which:
+   - Starts the Jetstream listener.
+   - Starts each enrichment/aggregation script as its own process, chained via Kafka.
 
-## Summarization: `enrich_summary.py`
 
-- KafkaConsumer reads from `social_posts_rumor`.
-- Loads spaCy + PyTextRank for extractive summarization.[6][5]
-- For each event:
-  - Runs TextRank over the text to extract the most salient phrase/sentence.
-  - For short posts, summary often equals the original post.
-  - Sets `event["summary"] = summary`.
-- Writes a copy into MongoDB `bigdata.summaries`.
-- Sends final enriched events to Kafka topic `social_posts_summary` or `social_posts_final` (depending on your latest wiring).
-
-***
-
-## Hate/toxicity detection: `enrich_hate.py`
-
-- KafkaConsumer reads from `social_posts_summary`.
-- Uses HuggingFace `pipeline("text-classification", model="unitary/toxic-bert", device=-1)` to classify toxicity on CPU.[8][6]
-  - `unitary/toxic-bert` is a BERT-based model fine-tuned for toxic content detection.
-- For each event:
-  - Runs classifier on `text`.
-  - Sets `event["toxic"] = True/False` based on label.
-  - Records `event["toxicity_score"]` as classifier confidence.
-- Writes a copy into MongoDB `bigdata.toxicity`.
-- Sends to Kafka topic `social_posts_final` as the final fully enriched record.
-
-***
-
-## Trend aggregation: `trend_aggregator.py`
-
-- KafkaConsumer reads from `social_posts_ner`.
-- Continuously aggregates entity mentions over a moving time window (e.g., 60 seconds).
-- For each event, for each entity in `event["entities"]`:
-  - Increments a counter in `entity_counter["LABEL:TEXT"]`.
-  - Tracks sentiment list for each entity.
-- Every N seconds:
-  - Prints top 10 entities with mention counts and sentiment breakdown.
-  - Writes a snapshot document to MongoDB `bigdata.trend_aggregates` with:
-    - `timestamp`
-    - `leaderboard = [{entity, mentions, positive, total}, ...]`
-- This collection powers your leaderboard visualizations in Metabase.
-
-***
-
-## MongoDB: Central storage
-
-All stages write to MongoDB in parallel with Kafka streaming:
-
-- `raw_posts`: raw Bluesky Jetstream JSON.
-- `language`: basic cleaned posts with language detection.
-- `sentiment`: adds sentiment labels.
-- `entities`: adds named entities.
-- `topics`: adds topic labels and topic keywords.
-- `anomalies`: flags topic spikes.
-- `rumor`: flags rumorous posts and scores.
-- `summaries`: adds summaries of posts.
-- `toxicity` (hate): adds toxicity flags and scores.
-- `trend_aggregates`: per-minute entity leaderboards for dashboards.[10][4][5]
-
-MongoDB’s flexible document model lets each stage append fields without strict schema, making it ideal for evolving NLP/ML pipelines.[11][5]
-
-***
-
-## Kafka: The streaming backbone
-
-- Each script is either a Kafka producer, consumer, or both, connected via topics:
-  - `social_posts` → `social_posts_enriched` → `social_posts_sentiment` → `social_posts_ner` → `social_posts_topics` → `social_posts_anomaly` → `social_posts_rumor` → `social_posts_summary` → `social_posts_final`.
-- Kafka ensures decoupling between stages, replayability, and scalability across machines.[2][12][1]
-
-***
 
 ## Models and libraries used
 
