@@ -1,0 +1,491 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Variables */
+:root {
+    --bg: #0a0e1a;
+    --card-bg: #1a1f38;
+    --border: #2a3354;
+    --text: #e8ecff;
+    --text-dim: #8b93c9;
+    --accent: #5b6fff;
+    --positive: #00f5a0;
+    --neutral: #6b7cff;
+    --negative: #ff4757;
+    --warning: #ffba08;
+}
+
+/* Base */
+body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.dashboard {
+    min-height: 100vh;
+}
+
+/* Navigation */
+.nav {
+    background: var(--card-bg);
+    border-bottom: 2px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+}
+
+.nav-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.75rem;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dot {
+    color: var(--positive);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.nav-link {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.nav-link:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-link.active {
+    color: var(--accent);
+    background: rgba(91, 111, 255, 0.1);
+}
+
+.live-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(0, 245, 160, 0.1);
+    border: 1px solid var(--positive);
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.indicator {
+    width: 8px;
+    height: 8px;
+    background: var(--positive);
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Main Content */
+.main-content {
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Controls Bar */
+.controls-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.map-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.control-btn {
+    padding: 0.5rem 1.25rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.control-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.control-btn.active {
+    background: var(--accent);
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.time-select {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+/* Map Section */
+.map-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.map-header h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.map-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.map-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.stat-icon {
+    font-size: 1.2rem;
+}
+
+.map-container {
+    width: 100%;
+    height: 500px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.map-legend {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    background: rgba(26, 31, 56, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+/* Geographic Grid */
+.geo-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.geo-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    grid-column: span 3;
+}
+
+.geo-card.chart-card {
+    grid-column: span 6;
+}
+
+.geo-card.large {
+    grid-column: span 12;
+}
+
+.card-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.card-header h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.card-info {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* Country/City Lists */
+.country-list,
+.city-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.location-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+    transition: all 0.3s ease;
+}
+
+.location-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
+}
+
+.location-name {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.location-flag {
+    font-size: 1.2rem;
+}
+
+.location-count {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+.geo-card.large .chart-container {
+    height: 350px;
+}
+
+/* Regional Stats */
+.regional-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+}
+
+.region-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.region-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+}
+
+.region-flag {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.region-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.region-name {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.region-count {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-family: 'Orbitron', monospace;
+    color: var(--text);
+}
+
+.region-sentiment {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.region-sentiment.positive {
+    background: rgba(0, 245, 160, 0.2);
+    color: var(--positive);
+}
+
+.region-sentiment.neutral {
+    background: rgba(107, 124, 255, 0.2);
+    color: var(--neutral);
+}
+
+.region-sentiment.negative {
+    background: rgba(255, 71, 87, 0.2);
+    color: var(--negative);
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 2rem;
+    font-style: italic;
+}
+
+/* Leaflet Customization */
+.leaflet-popup-content-wrapper {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.leaflet-popup-tip {
+    background: var(--card-bg);
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+    .geo-card {
+        grid-column: span 6;
+    }
+    
+    .geo-card.chart-card {
+        grid-column: span 6;
+    }
+    
+    .regional-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .nav {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .controls-bar {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .map-controls {
+        flex-wrap: wrap;
+    }
+    
+    .geo-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .geo-card,
+    .geo-card.chart-card,
+    .geo-card.large {
+        grid-column: span 1;
+    }
+    
+    .regional-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .map-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .map-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}

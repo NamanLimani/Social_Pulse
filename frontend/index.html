@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluesky Social Pulse Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav-brand">
+                <h1 class="nav-title">Social<span class="dot">●</span>Pulse</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">Dashboard</a>
+                <a href="charts.html" class="nav-link">Analytics</a>
+                <a href="geo.html" class="nav-link">Geographic</a>
+                <a href="advanced.html" class="nav-link">Advanced</a>
+            </div>
+            <div class="live-badge">
+                <span class="indicator"></span>
+                <span>LIVE</span>
+            </div>
+        </nav>
+
+        <!-- Main Grid -->
+        <main class="grid">
+            
+            <!-- Sentiment Card -->
+            <section class="card sentiment-card">
+                <h2>Sentiment Distribution</h2>
+                <div id="sentimentBars"></div>
+            </section>
+
+            <!-- Trending Card -->
+            <section class="card trending-card">
+                <h2>Trending Entities</h2>
+                <div id="trendingList"></div>
+            </section>
+
+            <!-- Languages Card -->
+            <section class="card lang-card">
+                <h2>Languages</h2>
+                <div id="languageGrid"></div>
+            </section>
+
+            <!-- Topics Card -->
+            <section class="card topics-card">
+                <h2>Active Topics</h2>
+                <div id="topicsList"></div>
+            </section>
+
+            <!-- Alerts Card -->
+            <section class="card alerts-card">
+                <h2>Recent Alerts</h2>
+                <div id="alertsList"></div>
+            </section>
+
+            <!-- Live Feed Card -->
+            <section class="card feed-card">
+                <h2>Live Feed</h2>
+                <div id="liveFeed"></div>
+            </section>
+
+        </main>
+
+        <!-- Stats Footer -->
+        <footer class="stats">
+            <div class="stat">
+                <span class="stat-label">Total Posts</span>
+                <span class="stat-value" id="totalPosts">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Posts/Min</span>
+                <span class="stat-value" id="postsPerMin">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Active Topics</span>
+                <span class="stat-value" id="activeTopics">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Alerts</span>
+                <span class="stat-value alert" id="alertCount">0</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
