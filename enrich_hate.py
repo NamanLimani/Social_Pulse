@@ -55,8 +55,9 @@ for msg in consumer:
         res = classifier(text)
         # Some models return label as "toxic"/"non-toxic" or "LABEL_1"/"LABEL_0"
         label = res[0]["label"].lower()
-        is_toxic = "toxic" in label or "negative" in label
+
         toxicity_score = float(res[0]["score"])
+        is_toxic = toxicity_score >= 0.6
 
     event["toxic"] = is_toxic
     event["toxicity_score"] = toxicity_score
