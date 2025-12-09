@@ -13,7 +13,7 @@ export async function GET() {
     const [totalPosts, topicsCount, alertCount] = await Promise.all([
       db.collection("language").estimatedDocumentCount(),
       db.collection("topics").countDocuments(
-        { created_at: { $gte: oneDayAgo, $lte: now }, active: true }),
+        { created_at: { $gte: oneDayAgo, $lte: now } }),
       db.collection("toxicity").countDocuments({
         created_at: { $gte: tenMinsAgo, $lte: now },
         $or: [{ toxic: true }, { is_rumor: true }, { topic_anomaly: true }] 
