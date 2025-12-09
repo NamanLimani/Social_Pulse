@@ -6,10 +6,11 @@ export async function GET() {
   try {
     const client = await clientPromise;
     const db = client.db("bigdata");
+    const now = new Date(Date.now()).toISOString();
 
     // "toxicity" is the final stage, containing all enriched fields
     const posts = await db.collection("toxicity")
-      .find()
+      .find({created_at: {$lte: now }})
       .sort({ created_at: -1 }) // Newest first
       .limit(50)
       .toArray();
