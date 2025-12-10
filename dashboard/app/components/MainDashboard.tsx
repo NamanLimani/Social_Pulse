@@ -1,133 +1,355 @@
 "use client";
-import React from 'react';
-import useSWR from 'swr';
-import { TrendingUp } from 'lucide-react';
+import React from "react";
+import useSWR from "swr";
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+import {
+  BarChart3,
+  Activity,
+  AlertTriangle,
+  Flame,
+  Skull,
+  Bug,
+  Tags,
+  Network,
+  FileText,
+} from "lucide-react";
+
+// ----- Chart.js imports -----
+import {
+  Chart as ChartJS,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+
+// ------- Types -------
+interface HashtagItem {
+  entity: string;
+  mentions: number;
+}
+
+interface FeedPost {
+  post_id: string;
+  author: string;
+  text: string;
+  created_at?: string;
+  toxic?: boolean;
+}
+
+interface StatBoxProps {
+  label: string;
+  value?: number;
+  icon: React.ReactNode;
+  gradient: string;
+  glow: string;
+}
+
+// ----------------------------
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MainDashboard() {
-  const { data: stats } = useSWR('/api/dashboard/stats', fetcher, { refreshInterval: 5000 });
-  const { data: sentiment } = useSWR('/api/dashboard/charts?type=sentiment_dist', fetcher);
-  
-  // Fetch hashtags for the main card
-  const { data: hashtags } = useSWR('/api/trends?type=hashtags', fetcher);
-  // Fetch entities for the footer
-  const { data: entities } = useSWR('/api/trends?type=entities', fetcher);
-  
-  const { data: feed } = useSWR('/api/stream', fetcher, { refreshInterval: 2000 });
+  const { data: stats } = useSWR("/api/dashboard/stats", fetcher, {
+    refreshInterval: 5000,
+  });
 
-  const getPercent = (val: number) => sentiment?.total ? ((val / sentiment.total) * 100).toFixed(1) : 0;
+  const { data: sentiment } = useSWR(
+    "/api/dashboard/charts?type=sentiment_dist",
+    fetcher
+  );
+
+  const { data: hashtags } = useSWR<HashtagItem[]>(
+    "/api/trends?type=hashtags",
+    fetcher
+  );
+
+  const { data: feed } = useSWR<FeedPost[]>("/api/stream", fetcher, {
+    refreshInterval: 2000,
+  });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-      
-      {/* 1. Sentiment Card */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
-        <h2 className="text-slate-400 font-bold uppercase text-sm mb-4 tracking-wider">Sentiment Distribution</h2>
-        <div className="space-y-4">
-          {['positive', 'neutral', 'negative', 'unknown'].map((type) => (
-            <div key={type}>
-              <div className="flex justify-between text-xs mb-1 uppercase font-semibold text-slate-400">
-                <span>{type}</span>
-                <span>{getPercent(sentiment?.[type] || 0)}%</span>
-              </div>
-              <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${type === 'positive' ? 'bg-emerald-400' : type === 'neutral' ? 'bg-indigo-400' : 'bg-rose-500'}`} 
-                  style={{ width: `${getPercent(sentiment?.[type] || 0)}%` }}
-                />
-              </div>
-            </div>
-          ))}
+
+      {/* ========================= */}
+      {/* SENTIMENT DISTRIBUTION   */}
+      {/* ========================= */}
+
+      <section
+        className="
+          bg-white/5 
+          backdrop-blur-md 
+          border border-white/10 
+          rounded-2xl 
+          p-6 
+          shadow-xl 
+          transition-all duration-300
+          hover:border-white/20
+          hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
+          hover:scale-[1.015]
+        "
+      >
+        <h2 className="text-slate-300 font-bold uppercase text-sm mb-4 tracking-wider">
+          Sentiment Distribution
+        </h2>
+
+        <div className="h-64">
+          <Bar
+            data={{
+              labels: ["Positive", "Neutral", "Negative", "Unknown"],
+              datasets: [
+                {
+                  label: "Count",
+                  data: [
+                    sentiment?.positive || 0,
+                    sentiment?.neutral || 0,
+                    sentiment?.negative || 0,
+                    sentiment?.unknown || 0,
+                  ],
+                  backgroundColor: [
+                    "rgba(16, 185, 129, 0.7)",
+                    "rgba(99, 102, 241, 0.7)",
+                    "rgba(239, 68, 68, 0.7)",
+                    "rgba(148, 163, 184, 0.7)",
+                  ],
+                  borderRadius: 6,
+                  barPercentage: 0.6,
+                },
+              ],
+            }}
+            options={{
+              indexAxis: "y",
+              responsive: true,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  enabled: true,
+                  backgroundColor: "rgba(0,0,0,0.7)",
+                  titleColor: "#fff",
+                  bodyColor: "#ddd",
+                  borderColor: "#0ea5e9",
+                  borderWidth: 1,
+                },
+              },
+              scales: {
+                x: {
+                  ticks: { color: "#94a3b8" },
+                  grid: { color: "rgba(255,255,255,0.05)" },
+                },
+                y: {
+                  ticks: { color: "#94a3b8", font: { size: 12 } },
+                  grid: { display: false },
+                },
+              },
+              animation: {
+                duration: 900,
+                easing: "easeOutQuart",
+              },
+            }}
+          />
         </div>
       </section>
 
-      {/* 2. Trending Hashtags Card (Fixed Mode) */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-slate-400 font-bold text-sm tracking-wider">
-             Trending Hashtags
-          </h2>
-        </div>
+      {/* ========================= */}
+      {/* TRENDING HASHTAGS        */}
+      {/* ========================= */}
+
+      <section
+        className="
+          bg-white/5 backdrop-blur-md 
+          border border-white/10 rounded-2xl 
+          p-6 shadow-xl 
+          transition-all duration-300
+          hover:border-white/20
+          hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
+          hover:scale-[1.015]
+          flex flex-col
+        "
+      >
+        <h2 className="text-slate-300 font-bold text-sm tracking-wider mb-4">
+          Trending Hashtags
+        </h2>
 
         <div className="space-y-3 flex-1">
-          {hashtags?.slice(0, 7).map((t: any, i: number) => (
-            <div key={i} className="flex justify-between items-center text-sm animate-in fade-in slide-in-from-right-2 duration-300">
-              <span className="text-blue-300 font-mono truncate max-w-[70%]">{t.entity}</span>
-              <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-xs min-w-[30px] text-center">
+          {(hashtags ?? []).slice(0, 7).map((t, i) => (
+            <div
+              key={i}
+              className="flex justify-between items-center text-sm text-slate-300"
+            >
+              <span className="truncate max-w-[70%]">{t.entity}</span>
+              <span className="bg-white/10 text-slate-200 px-2 py-0.5 rounded text-xs min-w-[30px] text-center">
                 {t.mentions}
               </span>
             </div>
           ))}
-          {(!hashtags) && <div className="text-slate-600 text-sm italic">Loading data...</div>}
-          {(hashtags?.length === 0) && <div className="text-slate-600 text-sm">No hashtags yet.</div>}
+
+          {!hashtags && (
+            <div className="text-slate-500 text-sm italic">Loading...</div>
+          )}
         </div>
       </section>
 
-      {/* 3. Live Feed Card */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg lg:col-span-1 h-[300px] flex flex-col">
+      {/* ========================= */}
+      {/* LIVE FEED                */}
+      {/* ========================= */}
+
+      <section
+        className="
+          bg-white/5 backdrop-blur-md 
+          border border-white/10 rounded-2xl 
+          p-6 shadow-xl transition-all 
+          hover:border-white/20 hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
+          hover:scale-[1.015]
+          h-[300px] flex flex-col
+        "
+      >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-slate-400 font-bold uppercase text-sm tracking-wider">Live Feed</h2>
+          <h2 className="text-slate-300 font-bold uppercase text-sm tracking-wider">
+            Live Feed
+          </h2>
           <span className="animate-pulse w-2 h-2 bg-red-500 rounded-full"></span>
         </div>
+
         <div className="overflow-y-auto space-y-3 pr-2 flex-1 custom-scrollbar">
-          {feed?.map((post: any) => (
-            <div key={post.post_id} className="text-xs border-l-2 border-slate-700 pl-3 py-1 hover:border-blue-500 transition-colors">
-              <div className="flex justify-between text-slate-500 mb-0.5">
+          {(feed ?? []).map((post) => (
+            <div
+              key={post.post_id}
+              className="text-xs text-slate-300 border-l-2 border-white/20 pl-3 py-1"
+            >
+              <div className="flex justify-between mb-0.5">
                 <span className="font-bold">@{post.author?.slice(0, 20)}</span>
-                {post.toxic && <span className="text-rose-500 font-bold">TOXIC</span>}
-                <span className="font-mono opacity-50 text-[10px]">
-                  {post.created_at ? new Date(post.created_at).toLocaleTimeString() : 'Just now'}
+
+                {post.toxic && (
+                  <span className="text-rose-400 font-bold">TOXIC</span>
+                )}
+
+                <span className="font-mono opacity-60 text-[10px]">
+                  {post.created_at
+                    ? new Date(post.created_at).toLocaleTimeString()
+                    : "Now"}
                 </span>
               </div>
-              <p className="text-slate-300 line-clamp-2 leading-relaxed">{post.text}</p>
+
+              <p className="text-slate-400 line-clamp-2">{post.text}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* 4. Stats Footer */}
-      <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-        
-        {/* Standard Stats */}
-        <StatBox label="Total Posts" value={stats?.totalPosts || 0} />
-        <StatBox label="Posts/Min" value={stats?.postsPerMin || 0} />
-        
-        {/* Top Entities Tag Cloud */}
-        <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg flex flex-col justify-center">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-3 h-3 text-emerald-400" />
-            <span className="text-slate-500 text-xs uppercase font-bold tracking-wide">Trending Topics</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {entities?.slice(0, 10).map((e: any, i: number) => (
-              <span 
-                key={i} 
-                className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] text-emerald-300 font-mono hover:bg-slate-700 transition-colors cursor-default"
-                title={`${e.mentions} mentions`}
-              >
-                {e.entity}
-              </span>
-            ))}
-            {!entities && <span className="text-xs text-slate-600">Loading...</span>}
-          </div>
-        </div>
+      {/* ========================= */}
+      {/* PREMIUM 3×3 GRID         */}
+      {/* ========================= */}
 
-        {/* Alerts Stat */}
-        <StatBox label="Alerts" value={stats?.alertCount || 0} isAlert />
+      <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+
+        <StatBox
+          label="Total Posts"
+          value={stats?.totalPosts}
+          icon={<BarChart3 className="w-5 h-5" />}
+          gradient="from-blue-600 to-blue-400"
+          glow="rgba(0,135,255,0.45)"
+        />
+
+        <StatBox
+          label="Topics"
+          value={stats?.topicCount}
+          icon={<Tags className="w-5 h-5" />}
+          gradient="from-purple-600 to-purple-400"
+          glow="rgba(150,80,255,0.45)"
+        />
+
+        <StatBox
+          label="Entities"
+          value={stats?.entityCount}
+          icon={<Network className="w-5 h-5" />}
+          gradient="from-emerald-600 to-emerald-400"
+          glow="rgba(0,255,135,0.45)"
+        />
+
+        <StatBox
+          label="Rumor Posts"
+          value={stats?.rumorPosts}
+          icon={<Flame className="w-5 h-5" />}
+          gradient="from-orange-600 to-orange-400"
+          glow="rgba(255,150,0,0.45)"
+        />
+
+        <StatBox
+          label="Toxic Posts"
+          value={stats?.toxicPosts}
+          icon={<Skull className="w-5 h-5" />}
+          gradient="from-rose-600 to-rose-400"
+          glow="rgba(255,0,80,0.45)"
+        />
+
+        <StatBox
+          label="Anomalies"
+          value={stats?.anomalyCount}
+          icon={<Bug className="w-5 h-5" />}
+          gradient="from-yellow-600 to-yellow-400"
+          glow="rgba(255,210,0,0.45)"
+        />
+
+        <StatBox
+          label="Summaries"
+          value={stats?.summaryCount}
+          icon={<FileText className="w-5 h-5" />}
+          gradient="from-cyan-600 to-cyan-400"
+          glow="rgba(0,255,255,0.45)"
+        />
+
+        <StatBox
+          label="Alerts"
+          value={stats?.alertCount}
+          icon={<AlertTriangle className="w-5 h-5" />}
+          gradient="from-red-600 to-red-400"
+          glow="rgba(255,0,0,0.45)"
+        />
+
+        <StatBox
+          label="Posts / Min"
+          value={stats?.postsPerMin}
+          icon={<Activity className="w-5 h-5" />}
+          gradient="from-green-600 to-green-400"
+          glow="rgba(0,255,0,0.45)"
+        />
       </div>
-
     </div>
   );
 }
 
-function StatBox({ label, value, isAlert }: any) {
+// ----------------------
+// PREMIUM STATBOX
+// ----------------------
+
+function StatBox({ label, value, icon, gradient, glow }: StatBoxProps) {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-lg hover:border-slate-700 transition-colors">
-      <div className="text-slate-500 text-xs uppercase font-bold tracking-wide">{label}</div>
-      <div className={`text-2xl font-mono mt-1 ${isAlert ? 'text-amber-500' : 'text-slate-200'}`}>
-        {value ? value.toLocaleString() : '0'}
+    <div
+      className={`
+        relative p-5 rounded-xl border 
+        bg-gradient-to-br ${gradient} 
+        border-slate-800 shadow-lg backdrop-blur 
+        transition-all duration-300
+        
+        hover:scale-[1.04]
+        hover:shadow-[0_0_20px_${glow}]
+        hover:border-white/20
+      `}
+    >
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-black/20 text-white">{icon}</div>
+        <span className="text-xs uppercase tracking-wide font-bold text-white/80">
+          {label}
+        </span>
+      </div>
+
+      <div className="text-3xl font-mono font-bold text-white drop-shadow">
+        {value ? value.toLocaleString() : "0"}
       </div>
     </div>
-  )
+  );
 }
