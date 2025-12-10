@@ -328,7 +328,7 @@ export default function AnalyticsView() {
         {/* Sentiment Timeline */}
         <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-6 h-[500px] col-span-1">
           <h3 className="text-gray-300 font-semibold mb-4">
-            Sentiment Timeline (Last 24 Hours)
+            Sentiment Timeline
           </h3>
           <div className="h-[420px]">
             <Line data={sentimentData} options={sentimentOptions} />
@@ -341,7 +341,7 @@ export default function AnalyticsView() {
         {/* Topic Distribution Pie */}
         <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-6 h-[420px]">
           <h3 className="text-gray-300 font-semibold mb-4">
-            Topic Distribution (Last 24 Hours)
+            Topic Distribution
           </h3>
           <div className="h-[340px]">
             {topicDist && topicDist.data.length > 0 ? (
@@ -357,7 +357,7 @@ export default function AnalyticsView() {
         {/* Language Distribution Pie */}
         <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-6 h-[420px]">
           <h3 className="text-gray-300 font-semibold mb-4">
-            Language Distribution (Last 24 Hours)
+            Language Distribution
           </h3>
           <div className="h-[340px]">
             {langDist && langDist.data.length > 0 ? (

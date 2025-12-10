@@ -14,19 +14,6 @@ import {
   FileText,
 } from "lucide-react";
 
-// ----- Chart.js imports -----
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Bar } from "react-chartjs-2";
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
-
 // ------- Types -------
 interface HashtagItem {
   entity: string;
@@ -49,8 +36,6 @@ interface StatBoxProps {
   glow: string;
 }
 
-// ----------------------------
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MainDashboard() {
@@ -72,6 +57,14 @@ export default function MainDashboard() {
     refreshInterval: 2000,
   });
 
+  const total =
+    (sentiment?.positive || 0) +
+    (sentiment?.neutral || 0) +
+    (sentiment?.negative || 0) +
+    (sentiment?.unknown || 0);
+
+  const pct = (v: number) => (total ? ((v / total) * 100).toFixed(1) : "0");
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
 
@@ -81,76 +74,43 @@ export default function MainDashboard() {
 
       <section
         className="
-          bg-white/5 
-          backdrop-blur-md 
-          border border-white/10 
-          rounded-2xl 
-          p-6 
-          shadow-xl 
-          transition-all duration-300
-          hover:border-white/20
-          hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
-          hover:scale-[1.015]
+        bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl 
+        p-6 shadow-xl transition-all duration-300
+        hover:border-white/20 hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
+        hover:scale-[1.015]
+        h-[330px]
         "
       >
         <h2 className="text-slate-300 font-bold uppercase text-sm mb-4 tracking-wider">
           Sentiment Distribution
         </h2>
 
-        <div className="h-64">
-          <Bar
-            data={{
-              labels: ["Positive", "Neutral", "Negative", "Unknown"],
-              datasets: [
-                {
-                  label: "Count",
-                  data: [
-                    sentiment?.positive || 0,
-                    sentiment?.neutral || 0,
-                    sentiment?.negative || 0,
-                    sentiment?.unknown || 0,
-                  ],
-                  backgroundColor: [
-                    "rgba(16, 185, 129, 0.7)",
-                    "rgba(99, 102, 241, 0.7)",
-                    "rgba(239, 68, 68, 0.7)",
-                    "rgba(148, 163, 184, 0.7)",
-                  ],
-                  borderRadius: 6,
-                  barPercentage: 0.6,
-                },
-              ],
-            }}
-            options={{
-              indexAxis: "y",
-              responsive: true,
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  enabled: true,
-                  backgroundColor: "rgba(0,0,0,0.7)",
-                  titleColor: "#fff",
-                  bodyColor: "#ddd",
-                  borderColor: "#0ea5e9",
-                  borderWidth: 1,
-                },
-              },
-              scales: {
-                x: {
-                  ticks: { color: "#94a3b8" },
-                  grid: { color: "rgba(255,255,255,0.05)" },
-                },
-                y: {
-                  ticks: { color: "#94a3b8", font: { size: 12 } },
-                  grid: { display: false },
-                },
-              },
-              animation: {
-                duration: 900,
-                easing: "easeOutQuart",
-              },
-            }}
-          />
+        <div className="space-y-4">
+
+          {[
+            { label: "Positive", value: sentiment?.positive, color: "bg-emerald-400" },
+            { label: "Neutral", value: sentiment?.neutral, color: "bg-indigo-400" },
+            { label: "Negative", value: sentiment?.negative, color: "bg-rose-500" },
+            { label: "Unknown", value: sentiment?.unknown, color: "bg-slate-400" },
+          ].map((item, idx) => (
+            <div key={idx} className="group">
+              <div className="flex justify-between text-xs mb-1 uppercase font-semibold text-slate-400">
+                <span>{item.label}</span>
+                <span>{pct(item.value || 0)}%</span>
+              </div>
+
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`
+                    h-full ${item.color} rounded-full transition-all duration-500
+                    group-hover:brightness-125 group-hover:shadow-[0_0_12px_rgba(0,255,255,0.35)]
+                  `}
+                  style={{ width: `${pct(item.value || 0)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+
         </div>
       </section>
 
@@ -160,14 +120,12 @@ export default function MainDashboard() {
 
       <section
         className="
-          bg-white/5 backdrop-blur-md 
-          border border-white/10 rounded-2xl 
-          p-6 shadow-xl 
-          transition-all duration-300
-          hover:border-white/20
-          hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
-          hover:scale-[1.015]
-          flex flex-col
+        bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl 
+        p-6 shadow-xl transition-all duration-300
+        hover:border-white/20 hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
+        hover:scale-[1.015]
+        flex flex-col
+        h-[330px]
         "
       >
         <h2 className="text-slate-300 font-bold text-sm tracking-wider mb-4">
@@ -181,7 +139,18 @@ export default function MainDashboard() {
               className="flex justify-between items-center text-sm text-slate-300"
             >
               <span className="truncate max-w-[70%]">{t.entity}</span>
-              <span className="bg-white/10 text-slate-200 px-2 py-0.5 rounded text-xs min-w-[30px] text-center">
+
+              <span
+                className="
+                bg-white/10 px-2 py-0.5 rounded text-xs min-w-[30px] text-center 
+                transition-all duration-300
+                group-hover:bg-white/20
+                hover:scale-[1.15]
+                hover:bg-white/20 hover:text-white 
+                hover:shadow-[0_0_12px_rgba(0,255,255,0.55)]
+                cursor-pointer
+              "
+              >
                 {t.mentions}
               </span>
             </div>
@@ -199,12 +168,11 @@ export default function MainDashboard() {
 
       <section
         className="
-          bg-white/5 backdrop-blur-md 
-          border border-white/10 rounded-2xl 
-          p-6 shadow-xl transition-all 
-          hover:border-white/20 hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
-          hover:scale-[1.015]
-          h-[300px] flex flex-col
+        bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl 
+        p-6 shadow-xl transition-all 
+        hover:border-white/20 hover:shadow-[0_0_35px_rgba(0,200,255,0.25)]
+        hover:scale-[1.015]
+        h-[330px] flex flex-col
         "
       >
         <div className="flex justify-between items-center mb-4">
