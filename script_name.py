@@ -3,16 +3,16 @@ import time
 
 # List your scripts here in the order you want to start them
 scripts_to_run = [
-    "bluesky_jetstream_to_kafka.py",
-    "enrich_language.py",
-    "enrich_sentiment.py",
-    "enrich_entities.py",
-    "trend_aggregator.py",
-    "enrich_topics.py",
-    "enrich_anomaly.py",
-    "enrich_rumor.py",
+    "enrich_hate.py",
     "enrich_summary.py",
-    "enrich_hate.py" 
+    "enrich_rumor.py",
+    "enrich_anomaly.py",
+    "enrich_topics.py",
+    "enrich_entities.py",
+    "enrich_sentiment.py",
+    "enrich_hashtags.py",
+    "enrich_language.py",
+    "bluesky_jetstream_to_kafka.py"
 ]
 
 processes = []
@@ -23,7 +23,7 @@ try:
         print(f"Starting {script}...")
         proc = subprocess.Popen(["python", script])
         processes.append(proc)
-        time.sleep(1)  # small delay to stagger startups
+        time.sleep(10)  # small delay to stagger startups
 
     print("All scripts running. Press Ctrl+C to exit.")
 
