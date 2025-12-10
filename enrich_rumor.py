@@ -35,11 +35,11 @@ rumor_coll = db["rumor"]
 print("Running ML-based rumor detection (zero-shot)...")
 
 # HuggingFace zero-shot pipeline with CPU only
-classifier = pipeline(
-    "zero-shot-classification",
-    model="facebook/bart-large-mnli",
-    device=-1,
-)
+# classifier = pipeline(
+#     "zero-shot-classification",
+#     model="valhalla/distilbart-mnli-12-6",
+#     device=-1,
+# )
 # For a lighter model, you can use: model="valhalla/distilbart-mnli-12-6"
 
 rumor_labels = ["rumor", "not rumor"]
@@ -60,10 +60,12 @@ for msg in consumer:
     rumor_score = 0.0
 
     if text.strip():
-        result = classifier(text, rumor_labels)
+        # result = classifier(text, rumor_labels)
         # result['labels'] is ordered by descending score
-        is_rumor = result["labels"][0] == "rumor"
-        rumor_score = float(result["scores"][0])
+        # is_rumor = result["labels"][0] == "rumor"
+        # rumor_score = float(result["scores"][0])
+        rumor_score = 0.0
+        is_rumor = False
 
     event["is_rumor"] = is_rumor
     event["rumor_score"] = rumor_score

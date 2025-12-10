@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       // 1. Calculate 24 hours ago
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-      const activity = await db.collection("toxicity").aggregate([
+      const activity = await db.collection("language").aggregate([
         // STEP 1: Convert the string "created_at" to a real Date object
         {
           $addFields: {
