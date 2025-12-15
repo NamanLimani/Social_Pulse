@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Pulse Geographic • World Map</title>
+    <link rel="stylesheet" href="geo.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav-brand">
+                <h1 class="nav-title">Social<span class="dot">●</span>Pulse</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Dashboard</a>
+                <a href="charts.html" class="nav-link">Analytics</a>
+                <a href="geo.html" class="nav-link active">Geographic</a>
+                <a href="advanced.html" class="nav-link">Advanced</a>
+            </div>
+            <div class="live-badge">
+                <span class="indicator"></span>
+                <span>LIVE</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- Map Controls -->
+            <div class="controls-bar">
+                <div class="map-controls">
+                    <button class="control-btn active" data-view="posts">
+                        📍 Post Locations
+                    </button>
+                    <button class="control-btn" data-view="heatmap">
+                        🔥 Activity Heatmap
+                    </button>
+                    <button class="control-btn" data-view="sentiment">
+                        😊 Sentiment Map
+                    </button>
+                </div>
+                <div class="time-selector">
+                    <select id="timeRange" class="time-select">
+                        <option value="1h">Last Hour</option>
+                        <option value="6h">Last 6 Hours</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Map Container -->
+            <section class="map-section">
+                <div class="map-header">
+                    <h2>Global Activity Map</h2>
+                    <div class="map-stats">
+                        <span class="map-stat">
+                            <span class="stat-icon">🌍</span>
+                            <span id="activeCountries">0</span> Countries
+                        </span>
+                        <span class="map-stat">
+                            <span class="stat-icon">📍</span>
+                            <span id="activeCities">0</span> Cities
+                        </span>
+                        <span class="map-stat">
+                            <span class="stat-icon">💬</span>
+                            <span id="totalMapped">0</span> Posts
+                        </span>
+                    </div>
+                </div>
+                <div id="map" class="map-container"></div>
+                
+                <!-- Map Legend -->
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #00f5a0;"></span>
+                        <span class="legend-label">Positive</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #6b7cff;"></span>
+                        <span class="legend-label">Neutral</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #ff4757;"></span>
+                        <span class="legend-label">Negative</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Geographic Analytics Grid -->
+            <div class="geo-grid">
+                
+                <!-- Top Countries -->
+                <section class="geo-card">
+                    <div class="card-header">
+                        <h2>Top Countries</h2>
+                        <span class="card-info">Posts by country</span>
+                    </div>
+                    <div class="country-list" id="countryList">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </section>
+
+                <!-- Top Cities -->
+                <section class="geo-card">
+                    <div class="card-header">
+                        <h2>Top Cities</h2>
+                        <span class="card-info">Most active cities</span>
+                    </div>
+                    <div class="city-list" id="cityList">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </section>
+
+                <!-- Regional Sentiment -->
+                <section class="geo-card chart-card">
+                    <div class="card-header">
+                        <h2>Regional Sentiment</h2>
+                        <span class="card-info">Sentiment by region</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="regionalChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Language by Region -->
+                <section class="geo-card chart-card">
+                    <div class="card-header">
+                        <h2>Language Distribution</h2>
+                        <span class="card-info">Languages by region</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="languageRegionChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Activity Timeline by Region -->
+                <section class="geo-card large">
+                    <div class="card-header">
+                        <h2>Regional Activity Over Time</h2>
+                        <span class="card-info">Post activity by major regions</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="regionalTimelineChart"></canvas>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Regional Stats Cards -->
+            <div class="regional-stats">
+                <div class="region-card">
+                    <div class="region-flag">🌎</div>
+                    <div class="region-info">
+                        <span class="region-name">Americas</span>
+                        <span class="region-count" id="americasCount">0</span>
+                        <span class="region-sentiment" id="americasSentiment">Neutral</span>
+                    </div>
+                </div>
+                <div class="region-card">
+                    <div class="region-flag">🌍</div>
+                    <div class="region-info">
+                        <span class="region-name">Europe</span>
+                        <span class="region-count" id="europeCount">0</span>
+                        <span class="region-sentiment" id="europeSentiment">Neutral</span>
+                    </div>
+                </div>
+                <div class="region-card">
+                    <div class="region-flag">🌏</div>
+                    <div class="region-info">
+                        <span class="region-name">Asia</span>
+                        <span class="region-count" id="asiaCount">0</span>
+                        <span class="region-sentiment" id="asiaSentiment">Neutral</span>
+                    </div>
+                </div>
+                <div class="region-card">
+                    <div class="region-flag">🌍</div>
+                    <div class="region-info">
+                        <span class="region-name">Africa</span>
+                        <span class="region-count" id="africaCount">0</span>
+                        <span class="region-sentiment" id="africaSentiment">Neutral</span>
+                    </div>
+                </div>
+                <div class="region-card">
+                    <div class="region-flag">🌏</div>
+                    <div class="region-info">
+                        <span class="region-name">Oceania</span>
+                        <span class="region-count" id="oceaniaCount">0</span>
+                        <span class="region-sentiment" id="oceaniaSentiment">Neutral</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="geo.js"></script>
+</body>
+</html>

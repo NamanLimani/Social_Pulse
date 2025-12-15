@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Pulse Analytics • Advanced Charts</title>
+    <link rel="stylesheet" href="charts.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav-brand">
+                <h1 class="nav-title">Social<span class="dot">●</span>Pulse</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Dashboard</a>
+                <a href="charts.html" class="nav-link active">Analytics</a>
+                <a href="geo.html" class="nav-link">Geographic</a>
+                <a href="advanced.html" class="nav-link">Advanced</a>
+            </div>
+            <div class="live-badge">
+                <span class="indicator"></span>
+                <span>LIVE</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- Time Range Selector -->
+            <div class="controls-bar">
+                <div class="time-selector">
+                    <button class="time-btn active" data-range="1h">1 Hour</button>
+                    <button class="time-btn" data-range="6h">6 Hours</button>
+                    <button class="time-btn" data-range="24h">24 Hours</button>
+                    <button class="time-btn" data-range="7d">7 Days</button>
+                </div>
+                <button class="refresh-btn" id="refreshBtn">
+                    <span>↻</span> Refresh
+                </button>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                
+                <!-- Sentiment Timeline -->
+                <section class="chart-card large">
+                    <div class="card-header">
+                        <h2>Sentiment Over Time</h2>
+                        <span class="chart-info">Real-time sentiment trends</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sentimentChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Entity Mentions -->
+                <section class="chart-card medium">
+                    <div class="card-header">
+                        <h2>Top Entities</h2>
+                        <span class="chart-info">Most mentioned entities</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="entitiesChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Language Distribution -->
+                <section class="chart-card medium">
+                    <div class="card-header">
+                        <h2>Language Distribution</h2>
+                        <span class="chart-info">Posts by language</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="languageChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Topic Distribution -->
+                <section class="chart-card medium">
+                    <div class="card-header">
+                        <h2>Topic Distribution</h2>
+                        <span class="chart-info">Active discussion topics</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="topicsChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Activity Timeline -->
+                <section class="chart-card medium">
+                    <div class="card-header">
+                        <h2>Post Activity</h2>
+                        <span class="chart-info">Posts per minute</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Alert Breakdown -->
+                <section class="chart-card small">
+                    <div class="card-header">
+                        <h2>Alert Types</h2>
+                        <span class="chart-info">Anomaly detection</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="alertsChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Sentiment Score -->
+                <section class="chart-card small">
+                    <div class="card-header">
+                        <h2>Sentiment Score</h2>
+                        <span class="chart-info">Current sentiment index</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sentimentGauge"></canvas>
+                    </div>
+                </section>
+
+                <!-- Engagement Heatmap -->
+                <section class="chart-card large">
+                    <div class="card-header">
+                        <h2>Hourly Engagement Pattern</h2>
+                        <span class="chart-info">Activity by hour of day</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="heatmapChart"></canvas>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Key Metrics Row -->
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="metric-icon">📊</div>
+                    <div class="metric-content">
+                        <span class="metric-label">Total Posts Analyzed</span>
+                        <span class="metric-value" id="totalAnalyzed">0</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">🔥</div>
+                    <div class="metric-content">
+                        <span class="metric-label">Trending Topics</span>
+                        <span class="metric-value" id="trendingCount">0</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">⚡</div>
+                    <div class="metric-content">
+                        <span class="metric-label">Peak Activity</span>
+                        <span class="metric-value" id="peakActivity">0/min</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">🌍</div>
+                    <div class="metric-content">
+                        <span class="metric-label">Languages Detected</span>
+                        <span class="metric-value" id="langCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="charts.js"></script>
+</body>
+</html>
