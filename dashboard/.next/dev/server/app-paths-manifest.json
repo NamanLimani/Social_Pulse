@@ -1,0 +1,8 @@
+{
+  "/api/dashboard/advanced/route": "app/api/dashboard/advanced/route.js",
+  "/api/dashboard/charts/route": "app/api/dashboard/charts/route.js",
+  "/api/dashboard/stats/route": "app/api/dashboard/stats/route.js",
+  "/api/stream/route": "app/api/stream/route.js",
+  "/api/trends/route": "app/api/trends/route.js",
+  "/page": "app/page.js"
+}
