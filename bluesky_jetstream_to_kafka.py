@@ -1,6 +1,7 @@
 import asyncio
 import json
 import copy
+import time
 
 import websockets
 from kafka import KafkaProducer
@@ -71,13 +72,14 @@ async def listen_to_bluesky():
     while True:
         try:
             # Build URI with cursor if available
-            last_cursor = load_last_cursor()
+            # last_cursor = load_last_cursor()
+            last_cursor = int(time.time() * 1000)
             uri = BASE_JETSTREAM_URI
             if last_cursor is not None:
                 # Small rewind (5 seconds) to be safe against gaps
                 rewind = 5_000_000  # microseconds
                 start_cursor = max(0, last_cursor - rewind)
-                uri = f"{BASE_JETSTREAM_URI}&cursor={start_cursor}"
+                uri = f"{BASE_JETSTREAM_URI}"
 
             print(f"Connecting to Bluesky Jetstream with cursor={last_cursor}...")
             async with websockets.connect(
